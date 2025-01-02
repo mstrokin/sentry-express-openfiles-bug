@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "start": "tsc -p tsconfig.build.json && node ./dist/main.js"
+  },
+  "dependencies": {
+    "@sentry/node": "^8.47.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
