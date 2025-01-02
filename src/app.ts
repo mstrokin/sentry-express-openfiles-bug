@@ -1,13 +1,6 @@
 import * as Sentry from "@sentry/node";
-import express from "express";
 
 export class App {
-  readonly expressApp: express.Express;
-
-  public constructor() {
-    this.expressApp = express();
-  }
-
   public static async init(): Promise<App> {
     const app = new App();
     return app;
@@ -15,7 +8,6 @@ export class App {
 
   public async start() {
     this.initSentry();
-    this.listen("127.0.0.1", 3000);
     console.log("App is listening, run lsof now");
     console.log(
       "lsof -p`ps aux |  grep \"main.js\" | grep node | head  -n 1| awk '{print $2}'`"
@@ -23,10 +15,11 @@ export class App {
     for (var i = 0; i <= 10; i++) {
       Sentry.captureException("fake exception to debug open files");
     }
+    this.listen("127.0.0.1", 3000);
   }
 
   private async listen(host: string, port: number) {
-    this.expressApp.listen(port, host);
+    setTimeout(() => {}, 1000000);
   }
 
   private initSentry(): void {
