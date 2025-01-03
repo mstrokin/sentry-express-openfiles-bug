@@ -4,6 +4,7 @@ import { createInterface } from "node:readline";
 
 //Switch to false to test the broken getContextLinesFromFile function (below) without testing whole Sentry.captureException
 const TEST_SENTRY = true;
+
 //Switch to true to enable the stream.destroy() fix in getContextLinesFromFile
 const FIX_ENABLED = false;
 
@@ -18,38 +19,20 @@ const brokenCode = () => {
 /* Broken code from @sentry/node */
 function getContextLinesFromFile(path: string): Promise<void> {
   return new Promise((resolve, _reject) => {
-    // It is important *not* to have any async code between createInterface and the 'line' event listener
-    // as it will cause the 'line' event to
-    // be emitted before the listener is attached.
     const stream = createReadStream(path);
     const lineReaded = createInterface({
       input: stream,
     });
+
     function destroyStreamAndResolve(): void {
       stream.destroy();
       resolve();
     }
-    // Init at zero and increment at the start of the loop because lines are 1 indexed.
-    let lineNumber = 0;
-    // We use this inside Promise.all, so we need to resolve the promise even if there is an error
-    // to prevent Promise.all from short circuiting the rest.
-    function onStreamError(e: Error): void {
-      // Mark file path as failed to read and prevent multiple read attempts.
-      lineReaded.close();
-      lineReaded.removeAllListeners();
-      resolve();
-    }
-
-    // We need to handle the error event to prevent the process from crashing in < Node 16
-    // https://github.com/nodejs/node/pull/31603
-    stream.on("error", onStreamError);
-    lineReaded.on("error", onStreamError);
 
     //MS: We need to call destroy.stream when lineReaded interface is closed, otherwise file is never closed.
     lineReaded.on("close", !FIX_ENABLED ? resolve : destroyStreamAndResolve);
 
     lineReaded.on("line", (line) => {
-      lineNumber++;
       lineReaded.close();
       //MS: This line causes readStream to never be closed
       lineReaded.removeAllListeners();
