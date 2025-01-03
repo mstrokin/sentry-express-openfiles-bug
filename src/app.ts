@@ -25,7 +25,10 @@ function getContextLinesFromFile(path: string): Promise<void> {
     const lineReaded = createInterface({
       input: stream,
     });
-
+    function destroyStreamAndResolve(): void {
+      stream.destroy();
+      resolve();
+    }
     // Init at zero and increment at the start of the loop because lines are 1 indexed.
     let lineNumber = 0;
     // We use this inside Promise.all, so we need to resolve the promise even if there is an error
@@ -41,17 +44,15 @@ function getContextLinesFromFile(path: string): Promise<void> {
     // https://github.com/nodejs/node/pull/31603
     stream.on("error", onStreamError);
     lineReaded.on("error", onStreamError);
-    lineReaded.on("close", resolve);
+
+    //MS: We need to call destroy.stream when lineReaded interface is closed, otherwise file is never closed.
+    lineReaded.on("close", !FIX_ENABLED ? resolve : destroyStreamAndResolve);
 
     lineReaded.on("line", (line) => {
       lineNumber++;
       lineReaded.close();
       //MS: This line causes readStream to never be closed
       lineReaded.removeAllListeners();
-      //MS: This line makes sure we destroy the stream
-      if (FIX_ENABLED) {
-        stream.destroy();
-      }
     });
   });
 }
